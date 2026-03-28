@@ -187,13 +187,19 @@ print(sonuc.output)
 ```python
 detector = PiiDetector(layers=["regex", "ner", "gliner"])
 
-not_ = "Hasta tip 2 diyabet tanısı almış, Sünni mezhebine mensup."
-rapor = detector.compliance_report(not_)
+# Gerçekçi bir hasta taburcu notu
+hasta_notu = """
+Hasta 52 yaşında erkek, tip 2 diyabet ve kronik böbrek yetmezliği tanıları mevcut.
+Metformin 1000mg 2x1 kullanıyor. Dini gerekçeyle kan transfüzyonunu reddetti,
+alternatif tedavi protokolü uygulandı.
+"""
+
+rapor = detector.compliance_report(hasta_notu)
 
 print(rapor.summary())
 # KVKK Uyum Raporu — genel risk: KRİTİK
 # KVKK Madde 6 (Özel Nitelikli Veri) tespit edildi!
-#   [KRİTİK] SAGLIK_VERISI — Açık rıza zorunlu.
+#   [KRİTİK] SAGLIK_VERISI — Açık rıza zorunlu. Yetkili kurum olmadan işlenemez.
 #   [KRİTİK] DINI_INANC   — Kural olarak işlenemez.
 
 print(rapor.has_madde6)  # True
