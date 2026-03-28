@@ -130,19 +130,21 @@ Bu mesaj olduğu gibi ChatGPT'ye giderse TC numarası OpenAI sunucularına ulaş
 ```python
 detector = PiiDetector(layers=["regex", "ner"])
 
-mesaj = "TC'im 10000000146, siparişim nerede?"
+mesaj = "Ahmet Yılmaz, 0532 123 45 67, siparişim nerede?"
 session = detector.create_session(mesaj)
 maskeli = session.mask()
-# → "TC'im [TC_KIMLIK_a3f], siparişim nerede?"
+# → "[KISI_ADI_x3k], [TELEFON_TR_b7f], siparişim nerede?"
 
 ai_yaniti = openai_cagri(maskeli)
-# AI yanıtlar: "[TC_KIMLIK_a3f] numaralı siparişiniz kargoda."
+# AI yanıtlar: "Merhaba [KISI_ADI_x3k], [TELEFON_TR_b7f] numaranıza
+#               SMS gönderdik, siparişiniz kargoya verildi."
 
 temiz_yanit = session.restore(ai_yaniti)
-# → "10000000146 numaralı siparişiniz kargoda."
+# → "Merhaba Ahmet Yılmaz, 0532 123 45 67 numaranıza
+#    SMS gönderdik, siparişiniz kargoya verildi."
 ```
 
-TC numarası hiç OpenAI'a gitmedi.
+İsim ve telefon hiç OpenAI'a gitmedi.
 
 ---
 
