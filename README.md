@@ -1,7 +1,7 @@
 # kvkk-pii
 
 [![PyPI](https://img.shields.io/pypi/v/kvkk-pii)](https://pypi.org/project/kvkk-pii/)
-[![Python](https://img.shields.io/pypi/pyversions/kvkk-pii)](https://pypi.org/project/kvkk-pii/)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://pypi.org/project/kvkk-pii/)
 [![Lisans](https://img.shields.io/pypi/l/kvkk-pii)](LICENSE)
 
 **Türkçe metinlerde kişisel veri tespiti, maskeleme ve KVKK uyum kontrolü — tek kütüphane.**
