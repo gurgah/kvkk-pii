@@ -104,14 +104,32 @@ print(rapor.summary())
 
 ---
 
-## Ne yapar?
+## Katmanlar — ne seçmeli?
 
-- **TC Kimlik, IBAN, VKN, telefon, plaka, e-posta** → regex + checksum doğrulama
-- **Kişi adı, kurum, konum** → Türkçe NER modeli (XLM-RoBERTa)
-- **Sağlık verisi, dini inanç, siyasi görüş** → KVKK Madde 6 (GLiNER, sıfır atışlı)
-- **Yapay zekâ proxy** → maskele → AI → sızıntı tespiti → geri yükle
-- **KVKK uyum raporu** → hangi madde ihlal edildi, risk seviyesi nedir
-- **Tamamen yerel** → hiçbir veri dışarı çıkmaz, model cihazda çalışır
+Üç katman bağımsız veya birlikte kullanılabilir. **Varsayılan: sadece regex.**
+
+| Katman | Seçim | Model | Boyut | Ne tespit eder | Ne zaman gerekli |
+|--------|-------|-------|-------|----------------|-----------------|
+| **Regex** | varsayılan | — | 0 MB | TC, IBAN, VKN, telefon, e-posta, plaka... | Her zaman — yapılandırılmış veri |
+| **NER** | `"ner"` | XLM-RoBERTa (TR) | ~450 MB | Kişi adı, kurum, konum | E-posta, chat, belge — serbest metin |
+| **GLiNER** | `"gliner"` | GLiNER multi | ~180 MB | Sağlık, din, siyasi görüş, sendika, biyometri | KVKK Madde 6 uyumu |
+
+```python
+PiiDetector()                                        # sadece regex (varsayılan)
+PiiDetector(layers=["regex", "ner"])                 # + isim/kurum/konum
+PiiDetector(layers=["regex", "gliner"])              # + Madde 6, NER olmadan
+PiiDetector(layers=["regex", "ner", "gliner"])       # tam sistem
+```
+
+**NER mi GLiNER mi?** İkisi farklı şey yapar — birbirinin alternatifi değil. NER Türkçe isim/kurum/konumda %94.92 F1 ile çalışır, GLiNER ise NER'in göremediği KVKK Madde 6 kategorilerini (sağlık, din, biyometri) yakalar. Sadece hafif bir kurulum istiyorsanız `["regex", "gliner"]` da geçerli — GLiNER isim de yakalayabilir ama Türkçe'de NER kadar başarılı değildir.
+
+**Conflict olur mu? Hayır.** Her katman, önceki katmanların bulduğu span'leri atlar — aynı metin parçası hiçbir zaman iki kez işaretlenmez:
+
+```
+Regex  → "10000000146" buldu  [0-11]
+NER    → [0-11] zaten dolu, atla
+GLiNER → [0-11] zaten dolu, atla
+```
 
 ---
 
@@ -120,7 +138,7 @@ print(rapor.summary())
 ```bash
 pip install kvkk-pii          # sadece regex (bağımlılık yok)
 pip install kvkk-pii[ner]     # + Türkçe NER (~450 MB)
-pip install kvkk-pii[full]    # + KVKK Madde 6 GLiNER (~180 MB)
+pip install kvkk-pii[full]    # + NER + GLiNER (~630 MB toplam)
 ```
 
 ---
