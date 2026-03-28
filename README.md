@@ -24,28 +24,34 @@ Bu bir KVKK ihlali. Ve son kullanıcı değil, veriyi işleyen şirket sorumlu.
 
 `kvkk-pii` yapay zekâ entegrasyonlarında **iki yönlü çalışır:**
 
-```mermaid
-flowchart LR
-    A([📄 Müşteri metni]) --> B
-
-    subgraph kvkk["🔒 kvkk-pii"]
-        B[Kişisel veri\ntespiti]
-        B --> C[Maskeleme\nTC→token\nIBAN→token]
-    end
-
-    C --> D([🤖 ChatGPT\nClaude\nLLM API])
-    D --> E
-
-    subgraph kvkk2["🔒 kvkk-pii"]
-        E[PII sızıntı\nkontrolü]
-        E --> F[Token → orijinal\ngeri yükleme]
-    end
-
-    F --> G([✅ Kullanıcıya\ndönen yanıt])
-
-    style kvkk fill:#e8f5e9,stroke:#4caf50
-    style kvkk2 fill:#e8f5e9,stroke:#4caf50
-    style D fill:#fff3e0,stroke:#ff9800
+```
+  Kullanıcı metni
+        │
+        ▼
+┌───────────────────┐
+│     kvkk-pii      │
+│  ① Veri tespiti   │  TC, IBAN, isim, telefon...
+│  ② Maskeleme      │  → [TC_KIMLIK_a3f], [KISI_ADI_x7k]
+└────────┬──────────┘
+         │  maskeli metin (kişisel veri yok)
+         ▼
+  ┌─────────────┐
+  │  ChatGPT /  │
+  │  Claude /   │
+  │   LLM API   │
+  └──────┬──────┘
+         │  AI yanıtı (token'larla)
+         ▼
+┌───────────────────┐
+│     kvkk-pii      │
+│  ③ Sızıntı        │  gerçek veri sızdı mı?
+│     kontrolü      │
+│  ④ Geri yükleme   │  [TC_KIMLIK_a3f] → 10000000146
+└────────┬──────────┘
+         │
+         ▼
+  Kullanıcıya yanıt
+  (orijinal verilerle)
 ```
 
 Yapay zekâ modeli hiçbir zaman gerçek kişisel veriyi görmez.
@@ -66,9 +72,9 @@ print(sonuc.report.safe)    # True → hiçbir veri sızmadı
 
 ---
 
-### PII sızıntısı (PII leakage) nedir?
+### Kişisel veri sızıntısı (PII leakage) nedir?
 
-Yapay zekâ modeline maskelenmiş veri gönderdiniz — ama model yanıtında yine de gerçek kişisel veriyi kullandı. Ya da prompt içindeki kişisel veriyi hiç fark etmeden geçirdiniz ve model bunu üçüncü bir içeriğe dahil etti. Buna **PII sızıntısı** denir.
+Yapay zekâ modeline maskelenmiş veri gönderdiniz — ama model yanıtında yine de gerçek kişisel veriyi kullandı. Ya da prompt içindeki kişisel veriyi hiç fark etmeden geçirdiniz ve model bunu üçüncü bir içeriğe dahil etti. Buna **kişisel veri sızıntısı** (PII leakage) denir.
 
 `kvkk-pii` AI yanıtını otomatik tarar: maskelenen veriler geri döndü mü, yeni kişisel veri ortaya çıktı mı, risk var mı?
 
@@ -123,9 +129,9 @@ pip install kvkk-pii[full]    # + KVKK Madde 6 GLiNER (~180 MB)
 
 ### Senaryo 1 — Destek ekibi müşteri mesajını AI ile yanıtlıyor
 
-Müşteri: *"TC'im 10000000146, siparişim nerede?"*
+**Problem:** Müşteri hizmetleri ekibi gelen mesajları ChatGPT'ye yapıştırarak yanıt taslağı oluşturuyor. Mesajların içinde isim, telefon, TC kimlik numarası var. Bunların tamamı OpenAI sunucularına gidiyor — şirket habersiz.
 
-Bu mesaj olduğu gibi ChatGPT'ye giderse TC numarası OpenAI sunucularına ulaşır.
+**Çözüm:** Mesaj AI'ya gitmeden önce kişisel veriler maskelenir, AI maskeli metinle çalışır, yanıt kullanıcıya geri verilmeden orijinal veriler restore edilir.
 
 ```python
 detector = PiiDetector(layers=["regex", "ner"])
@@ -144,13 +150,13 @@ temiz_yanit = session.restore(ai_yaniti)
 #    SMS gönderdik, siparişiniz kargoya verildi."
 ```
 
-İsim ve telefon hiç OpenAI'a gitmedi.
-
 ---
 
 ### Senaryo 2 — Finansal e-posta özetleme
 
-Muhasebe ekibi IBAN ve tutar içeren e-postaları AI ile özetlettiriyor.
+**Problem:** Muhasebe ve hukuk ekipleri IBAN, kişi adı ve tutar içeren e-postaları AI ile özetletiyor. Bu e-postalar şirket içi gizli finansal veri içeriyor — üçüncü taraf bir AI'a gönderilmesi hem KVKK hem ticari sır ihlali.
+
+**Çözüm:** E-posta AI'ya gitmeden önce otomatik maskelenir. Özet gelince hassas veriler geri yüklenir. Sızıntı olursa işlem durdurulur.
 
 ```python
 eposta = """
@@ -166,15 +172,17 @@ sonuc = detector.two_way(
 )
 
 print(sonuc.output)
-# → Fatma Kaya'nın hesabına 42.500 TL ödeme yapılacak...
-#   (IBAN ve isim AI'ya gitmedi, özette geri yüklendi)
+# → "Fatma Kaya'nın hesabına 42.500 TL ödeme yapılacak, teyit bekleniyor."
+#   (IBAN ve isim AI'ya hiç gitmedi, özette geri yüklendi)
 ```
 
 ---
 
 ### Senaryo 3 — Sağlık verisi tespiti (KVKK Madde 6)
 
-Hasta notlarında özel nitelikli veri otomatik işaretlenir.
+**Problem:** Bir sağlık uygulaması hasta notlarını veritabanına yazıyor. Bu notlarda tanı bilgisi, din, sendika üyeliği gibi KVKK Madde 6 kapsamında "özel nitelikli" veriler olabilir. Bunlar yanlışlıkla loglara düşüyor ya da yetkisiz kişilerle paylaşılıyor.
+
+**Çözüm:** Her kayıt öncesi metin taranır, hangi KVKK maddelerini tetiklediği ve risk seviyesi otomatik raporlanır.
 
 ```python
 detector = PiiDetector(layers=["regex", "ner", "gliner"])
@@ -195,7 +203,9 @@ print(rapor.has_madde6)  # True
 
 ### Senaryo 4 — Log anonimleştirme
 
-Uygulama loglarında kişisel veri varsa KVKK ihlali doğar.
+**Problem:** Uygulama logları hata ayıklama için değerli ama içinde kullanıcı telefonu, e-postası, IP adresi var. Bu loglar Datadog, Elastic veya S3'e gönderiliyor — yani kişisel veri üçüncü taraflara akıyor. KVKK bu durumu açıkça ihlal sayar.
+
+**Çözüm:** Logging katmanına tek satır filtre eklenir. Tüm loglar diske veya servise gitmeden önce otomatik temizlenir.
 
 ```python
 import logging
@@ -210,14 +220,20 @@ class KvkkLogFilter(logging.Filter):
 
 logging.getLogger().addFilter(KvkkLogFilter())
 
-# Artık loglar otomatik temizlenir:
 logging.info("Kullanıcı 0532 123 45 67 ile giriş yaptı")
 # → "Kullanıcı [TELEFON_TR] ile giriş yaptı"
+
+logging.warning("Hata: ali@example.com, IP: 192.168.1.1")
+# → "Hata: [EMAIL], IP: [IP_ADRESI]"
 ```
 
 ---
 
-### Senaryo 5 — FastAPI servisi
+### Senaryo 5 — FastAPI ile kişisel veri tarama servisi
+
+**Problem:** Büyük bir ekipte her geliştiricinin kütüphaneyi ayrı ayrı entegre etmesi zor. Merkezi bir tarama servisi olsa tüm mikroservisler oraya istek atabilir.
+
+**Çözüm:** `kvkk-pii`'yi tek bir FastAPI servisi olarak ayağa kaldır, diğer servisler REST ile çağırsın.
 
 ```python
 from fastapi import FastAPI
