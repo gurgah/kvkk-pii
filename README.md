@@ -133,6 +133,18 @@ GLiNER → [0-11] zaten dolu, atla
 
 ---
 
+## Hangi kurulum bana göre?
+
+| Durum | Kurulum | Kod |
+|-------|---------|-----|
+| Form/veritabanı tarama, log temizleme | `pip install kvkk-pii` | `PiiDetector()` |
+| E-posta, chat, müşteri mesajı | `pip install kvkk-pii[ner]` | `PiiDetector(layers=["regex", "ner"])` |
+| Sağlık, HR, hukuk belgesi (Madde 6) | `pip install kvkk-pii[full]` | `PiiDetector(layers=["regex", "ner", "gliner"])` |
+| Hafif kurulum + Madde 6 (NER olmadan) | `pip install kvkk-pii[full]` | `PiiDetector(layers=["regex", "gliner"])` |
+| Çok dilli metin (TR+EN+DE) | `pip install kvkk-pii[full]` | `presets.multilingual()` |
+
+---
+
 ## Kurulum
 
 ```bash
