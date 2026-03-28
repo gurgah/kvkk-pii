@@ -75,11 +75,19 @@ class PiiDetector:
         from .compliance import ComplianceReport
         return ComplianceReport.from_result(self.analyze(text))
 
-    def create_session(self, text: str) -> "PiiSession":
-        """LLM proxy kullanımı için session oluştur."""
-        from .session import PiiSession
+    def create_session(self, text: str, token_format: str | None = None) -> "PiiSession":
+        """
+        LLM proxy kullanımı için session oluştur.
+
+        token_format örnekleri:
+            "[{type}_{id}]"      → varsayılan: [TC_KIMLIK_a3f]
+            "__{type}_{id}__"    → JSON/SQL güvenli: __TC_KIMLIK_a3f__
+            "PII_{type}_{id}"    → XML güvenli: PII_TC_KIMLIK_a3f
+            "<<{type}_{id}>>"    → özel format
+        """
+        from .session import PiiSession, DEFAULT_TOKEN_FORMAT
         result = self.analyze(text)
-        return PiiSession(result)
+        return PiiSession(result, token_format=token_format or DEFAULT_TOKEN_FORMAT)
 
     def leakage_analyzer(self) -> "LeakageAnalyzer":
         """LeakageAnalyzer döndür."""
@@ -91,6 +99,7 @@ class PiiDetector:
         prompt: str,
         call_fn: "Callable[[str], str]",
         on_leak: "Literal['raise', 'warn', 'ignore']" = "warn",
+        token_format: str | None = None,
     ) -> "TwoWayResult":
         """
         İki yönlü PII proxy — mask → AI → leakage check → restore.
@@ -112,7 +121,7 @@ class PiiDetector:
         from .proxy import TwoWayResult
 
         # 1. Mask
-        session = self.create_session(prompt)
+        session = self.create_session(prompt, token_format=token_format)
         masked = session.mask(prompt)
 
         # 2. AI çağrısı

@@ -6,11 +6,12 @@ Session ephemeral'dır — serialize edilmez, saklanmaz.
 """
 from __future__ import annotations
 import random
-import re
 import string
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from .result import PiiEntity, PiiResult
+
+DEFAULT_TOKEN_FORMAT = "[{type}_{id}]"
 
 
 def _short_id() -> str:
@@ -28,21 +29,35 @@ class MaskedEntity:
 class PiiSession:
     """
     Kullanım:
-        session = detector.create_session()
-        masked  = session.mask("Ali Veli TC: 10000000146")
+        session = detector.create_session(text)
+        masked  = session.mask()
         # → "[KISI_ADI_x7k] TC: [TC_KIMLIK_a3f]"
 
         restored = session.restore("[KISI_ADI_x7k] bulunamadı")
         # → "Ali Veli bulunamadı"
+
+    Token formatı özelleştirme:
+        # JSON/SQL için güvenli
+        session = detector.create_session(text, token_format="__{type}_{id}__")
+
+        # XML için
+        session = detector.create_session(text, token_format="PII_{type}_{id}")
+
+        # Sadece tip, ID olmadan (restore çalışmaz, sadece anonymize için)
+        detector.anonymize(text, placeholder="***")
     """
 
-    def __init__(self, result: PiiResult) -> None:
+    def __init__(self, result: PiiResult, token_format: str = DEFAULT_TOKEN_FORMAT) -> None:
         self._result = result
+        self._token_format = token_format
         # orijinal değer → placeholder (aynı değer tekrar geçerse aynı placeholder)
         self._value_to_placeholder: dict[str, str] = {}
         # placeholder → orijinal değer (restore için)
         self._placeholder_to_value: dict[str, str] = {}
         self.masked_entities: list[MaskedEntity] = []
+
+    def _make_placeholder(self, entity_type: str, uid: str) -> str:
+        return self._token_format.format(type=entity_type, id=uid)
 
     def _get_or_create_placeholder(self, entity: PiiEntity) -> str:
         key = entity.text
@@ -51,10 +66,10 @@ class PiiSession:
 
         uid = _short_id()
         # Çakışma ihtimaline karşı yeniden üret
-        while f"[{entity.entity_type}_{uid}]" in self._placeholder_to_value:
+        while self._make_placeholder(entity.entity_type, uid) in self._placeholder_to_value:
             uid = _short_id()
 
-        placeholder = f"[{entity.entity_type}_{uid}]"
+        placeholder = self._make_placeholder(entity.entity_type, uid)
         self._value_to_placeholder[key] = placeholder
         self._placeholder_to_value[placeholder] = key
         return placeholder
@@ -66,7 +81,6 @@ class PiiSession:
         """
         source = text if text is not None else self._result.text
         if text is not None and text != self._result.text:
-            # Farklı metin verilmişse yeniden analiz et — session'ı güncelle
             raise ValueError(
                 "mask() orijinal metinle çağrılmalı. "
                 "Farklı metin için yeni session oluştur."

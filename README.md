@@ -393,6 +393,44 @@ Model cache'i: `~/.cache/huggingface/hub` — `HF_HOME` env variable ile değiş
 
 ---
 
+### Maskeleme token formatını değiştirme
+
+Varsayılan format `[TC_KIMLIK_a3f]` şeklindedir. JSON, SQL veya XML içinde köşeli parantez sorun çıkarıyorsa formatı özelleştirebilirsiniz:
+
+```python
+from kvkk_pii import PiiDetector
+
+detector = PiiDetector(layers=["regex", "ner"])
+
+metin = "Ahmet Yılmaz, TC: 10000000146, tel: 0532 123 45 67"
+
+# Varsayılan format — [TC_KIMLIK_a3f]
+session = detector.create_session(metin)
+
+# JSON/SQL için güvenli — __TC_KIMLIK_a3f__
+session = detector.create_session(metin, token_format="__{type}_{id}__")
+
+# XML için güvenli — PII_TC_KIMLIK_a3f
+session = detector.create_session(metin, token_format="PII_{type}_{id}")
+
+# Özel format — <<TC_KIMLIK_a3f>>
+session = detector.create_session(metin, token_format="<<{type}_{id}>>")
+
+masked = session.mask()
+# → "__KISI_ADI_x7k__, TC: __TC_KIMLIK_a3f__, tel: __TELEFON_TR_b2c__"
+
+# two_way() ile de kullanılabilir
+sonuc = detector.two_way(
+    prompt=metin,
+    call_fn=lambda m: ai_yanit(m),
+    token_format="__{type}_{id}__",
+)
+```
+
+`{type}` entity tipini, `{id}` 3 karakterli benzersiz kimliği temsil eder. Restore her zaman çalışır — format ne olursa olsun.
+
+---
+
 ### Özel recognizer
 
 ```python

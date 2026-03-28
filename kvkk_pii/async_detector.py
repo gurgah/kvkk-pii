@@ -55,6 +55,7 @@ class AsyncPiiDetector:
         prompt: str,
         call_fn: Callable[[str], Awaitable[str]],
         on_leak: Literal["raise", "warn", "ignore"] = "warn",
+        token_format: str | None = None,
     ) -> TwoWayResult:
         """
         Iki yonlu async proxy.
@@ -65,7 +66,7 @@ class AsyncPiiDetector:
         from .proxy import TwoWayResult
 
         # 1. Mask (sync, hizli)
-        session = self._detector.create_session(prompt)
+        session = self._detector.create_session(prompt, token_format=token_format)
         masked = session.mask(prompt)
 
         # 2. Async AI cagrisi
