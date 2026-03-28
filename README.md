@@ -294,6 +294,57 @@ async def anonim(metin: str):
 
 ---
 
+### Senaryo 6 — CI/CD pipeline'ında KVKK uyum kontrolü
+
+**Problem:** Staging veya üretim ortamına deploy edilecek kod, kullanıcı verisi işleyen metin sabitleri veya test fixture'ları içerebilir. Bunlar fark edilmeden repoya giriyor.
+
+**Çözüm:** KVKK uyum raporunu CI adımına ekle. `has_madde6` veya `risk_level == "KRİTİK"` içeren commit/deploy'u otomatik olarak durdur.
+
+```python
+# scripts/kvkk_check.py — CI adımı olarak çalıştırılır
+import sys
+import glob
+from kvkk_pii import PiiDetector
+
+detector = PiiDetector(layers=["regex", "ner"])
+failed = False
+
+# Test fixture ve seed dosyalarını tara
+for path in glob.glob("tests/fixtures/**/*.txt", recursive=True):
+    text = open(path).read()
+    rapor = detector.compliance_report(text)
+
+    if rapor.risk_level in ("YÜKSEK", "KRİTİK"):
+        print(f"[KVKK] {path}: {rapor.summary()}", file=sys.stderr)
+        failed = True
+
+sys.exit(1 if failed else 0)
+```
+
+GitHub Actions entegrasyonu:
+
+```yaml
+# .github/workflows/kvkk.yml
+name: KVKK Uyum Kontrolü
+
+on: [push, pull_request]
+
+jobs:
+  kvkk-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install kvkk-pii[ner]
+      - run: python scripts/kvkk_check.py
+```
+
+Gerçek TC kimlik, IBAN veya sağlık verisi içeren bir dosya commit'e girerse pipeline derleme aşamasında durur — production'a ulaşmadan önce.
+
+---
+
 ## Tespit Edilen Veri Türleri
 
 ### Katman 1 — Regex + Checksum (bağımlılık yok)
