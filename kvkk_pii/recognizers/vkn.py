@@ -10,9 +10,14 @@ def _checksum_valid(vkn: str) -> bool:
     total = 0
     for i in range(9):
         tmp = (d[i] + (9 - i)) % 10
-        if tmp != 0:
-            total += (tmp * (2 ** (9 - i))) % 9
-    check = (10 - (total % 10)) % 10
+        if tmp == 0:
+            val = 9
+        else:
+            val = (tmp * (2 ** (9 - i))) % 9
+            if val == 0:
+                val = 9
+        total += val
+    check = total % 10
     return d[9] == check
 
 

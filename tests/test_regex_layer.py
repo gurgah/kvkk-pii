@@ -1,5 +1,6 @@
+import pathlib
 import sys
-sys.path.insert(0, "/Users/jangis/Code/pii-tool")
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 from kvkk_pii import PiiDetector, BaseRecognizer, DEFAULT_RECOGNIZERS
 from kvkk_pii.recognizers.kisi_adi import KisiAdiRecognizer

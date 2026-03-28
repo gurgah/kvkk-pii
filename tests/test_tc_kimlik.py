@@ -1,6 +1,7 @@
 """TC Kimlik Numarası tanıyıcı — kapsamlı testler."""
+import pathlib
 import sys
-sys.path.insert(0, "/Users/jangis/Code/pii-tool")
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 import pytest
 from kvkk_pii.recognizers.tc_kimlik import TcKimlikRecognizer
 from kvkk_pii.config import TcKimlikConfig

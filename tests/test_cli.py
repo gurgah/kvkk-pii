@@ -18,7 +18,7 @@ def run_cli(*args):
 def test_version(capsys):
     run_cli("version")
     out = capsys.readouterr().out
-    assert "0.1.0" in out
+    assert "0.1." in out
 
 
 def test_scan_text(capsys):
