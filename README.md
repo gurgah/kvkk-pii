@@ -24,12 +24,31 @@ Bu bir KVKK ihlali. Ve son kullanıcı değil, veriyi işleyen şirket sorumlu.
 
 `kvkk-pii` yapay zekâ entegrasyonlarında **iki yönlü çalışır:**
 
-```
-① Gönderilmeden önce  →  kişisel veriyi tespit et, benzersiz takma adla maskele
-② Yanıt geldikten sonra  →  takma adları orijinal verilerle geri yükle
+```mermaid
+flowchart LR
+    A([📄 Müşteri metni]) --> B
+
+    subgraph kvkk["🔒 kvkk-pii"]
+        B[Kişisel veri\ntespiti]
+        B --> C[Maskeleme\nTC→token\nIBAN→token]
+    end
+
+    C --> D([🤖 ChatGPT\nClaude\nLLM API])
+    D --> E
+
+    subgraph kvkk2["🔒 kvkk-pii"]
+        E[PII sızıntı\nkontrolü]
+        E --> F[Token → orijinal\ngeri yükleme]
+    end
+
+    F --> G([✅ Kullanıcıya\ndönen yanıt])
+
+    style kvkk fill:#e8f5e9,stroke:#4caf50
+    style kvkk2 fill:#e8f5e9,stroke:#4caf50
+    style D fill:#fff3e0,stroke:#ff9800
 ```
 
-Böylece yapay zekâ modeli hiçbir zaman gerçek kişisel veriyi görmez.
+Yapay zekâ modeli hiçbir zaman gerçek kişisel veriyi görmez.
 
 ```python
 from kvkk_pii import PiiDetector
