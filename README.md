@@ -1,185 +1,153 @@
 # kvkk-pii
 
-**Python ile KVKK uyumlu kişisel veri tespiti ve anonimleştirme kütüphanesi.**
+[![PyPI](https://img.shields.io/pypi/v/kvkk-pii)](https://pypi.org/project/kvkk-pii/)
+[![Python](https://img.shields.io/pypi/pyversions/kvkk-pii)](https://pypi.org/project/kvkk-pii/)
+[![Lisans](https://img.shields.io/pypi/l/kvkk-pii)](LICENSE)
 
-Türkçe metinlerde TC kimlik numarası, IBAN, telefon, e-posta ve daha fazlasını tespit edin. Yapay zekâya göndermeden önce verileri maskeleyin. KVKK Madde 6 özel nitelikli kategorileri (sağlık, din, biyometri) otomatik işaretleyin. Tüm işlemler yerel makinede — hiçbir veri dışarı çıkmaz.
+## Müşteri verisini yapay zekâya göndermeden önce ne yapıyorsunuz?
+
+Birçok ekip ChatGPT, Claude veya dahili LLM'lere **TC kimlik numarası, IBAN, telefon, hasta bilgisi** içeren metinler gönderiyor. Farkında olmadan. Bu hem **KVKK ihlali** hem de ciddi bir güvenlik riski.
+
+`kvkk-pii` bu sorunu çözer:
+
+```
+müşteri metni  →  kişisel verileri maskele  →  AI'ya gönder  →  sızıntı kontrol et  →  geri yükle
+```
 
 ```python
 from kvkk_pii import PiiDetector
 
-detector = PiiDetector()
-sonuc = detector.analyze("Ali Veli, TC: 10000000146, tel: 0532 123 45 67")
+detector = PiiDetector(layers=["regex", "ner"])
 
-for e in sonuc.entities:
-    print(e)
-# PiiEntity(type='TC_KIMLIK', text='10000000146', score=1.00, layer='regex')
-# PiiEntity(type='TELEFON_TR', text='0532 123 45 67', score=1.00, layer='regex')
+sonuc = detector.two_way(
+    prompt="Ahmet Yılmaz (TC: 10000000146) iade talebini ilet.",
+    call_fn=lambda maskeli: openai_cagri(maskeli),
+)
+
+print(sonuc.output)         # AI yanıtı — orijinal isim ve TC geri yüklendi
+print(sonuc.report.safe)    # True → hiçbir veri sızmadı
 ```
 
 ---
 
-## Neden kvkk-pii?
+## Ne yapar?
 
-- **KVKK odaklı** — TC Kimlik, VKN, IBAN, SGK, plaka ve Madde 6 özel kategoriler
-- **Tamamen yerel** — model cihaza indirilir, veri hiçbir sunucuya gitmez
-- **3 katmanlı tespit** — Regex → XLM-RoBERTa NER → GLiNER (sıfır atışlı)
-- **Yapay zekâ proxy** — ChatGPT/Claude'a göndermeden önce maskele, sonra geri yükle
-- **Uyum raporu** — tespit edilen verileri KVKK maddelerine göre sınıflandır
-- **Kolay entegrasyon** — FastAPI, Django, Celery ile uyumlu; async desteği var
-- **Özelleştirilebilir** — kendi recognizer'ını yaz, eşik değerlerini ayarla
+- **TC Kimlik, IBAN, VKN, telefon, plaka, e-posta** → regex + checksum doğrulama
+- **Kişi adı, kurum, konum** → Türkçe NER modeli (XLM-RoBERTa)
+- **Sağlık verisi, dini inanç, siyasi görüş** → KVKK Madde 6 (GLiNER, sıfır atışlı)
+- **Yapay zekâ proxy** → maskele → AI → sızıntı tespiti → geri yükle
+- **KVKK uyum raporu** → hangi madde ihlal edildi, risk seviyesi nedir
+- **Tamamen yerel** → hiçbir veri dışarı çıkmaz, model cihazda çalışır
 
 ---
 
 ## Kurulum
 
 ```bash
-# Sadece regex katmanı (bağımlılık yok)
-pip install kvkk-pii
-
-# + NER katmanı — Türkçe isim/yer/kurum tespiti (~450 MB)
-pip install kvkk-pii[ner]
-
-# + GLiNER — KVKK Madde 6 özel kategoriler (~180 MB)
-pip install kvkk-pii[full]
-```
-
-Modeller ilk kullanımda HuggingFace'den indirilir ve `~/.cache/huggingface/hub` konumuna kaydedilir.
-
----
-
-## Kullanım Senaryoları
-
-### 1. Log Anonimleştirme
-
-Uygulama loglarında kişisel veri varsa KVKK ihlali doğuyor. Logları kaydetmeden önce otomatik maskeleyin.
-
-```python
-from kvkk_pii import PiiDetector
-
-detector = PiiDetector()
-
-log_satiri = "Kullanıcı 532 123 45 67 numaralı telefonla giriş yaptı, IP: 192.168.1.1"
-temiz_log = detector.anonymize(log_satiri)
-# → "Kullanıcı [TELEFON_TR] numaralı telefonla giriş yaptı, IP: [IP_ADRESI]"
+pip install kvkk-pii          # sadece regex (bağımlılık yok)
+pip install kvkk-pii[ner]     # + Türkçe NER (~450 MB)
+pip install kvkk-pii[full]    # + KVKK Madde 6 GLiNER (~180 MB)
 ```
 
 ---
 
-### 2. ChatGPT / Claude'a Güvenli Veri Gönderme
+## Gerçek Senaryolar
 
-Müşteri verisini yapay zekâya göndermeden önce maskeleyin, yanıtı geri yükleyin. Veri hiçbir zaman OpenAI'a ulaşmaz.
+### Senaryo 1 — Destek ekibi müşteri mesajını AI ile yanıtlıyor
+
+Müşteri: *"TC'im 10000000146, siparişim nerede?"*
+
+Bu mesaj olduğu gibi ChatGPT'ye giderse TC numarası OpenAI sunucularına ulaşır.
 
 ```python
-import openai
-from kvkk_pii import PiiDetector
-
 detector = PiiDetector(layers=["regex", "ner"])
 
-sonuc = detector.two_way(
-    prompt="Ahmet Yılmaz'ın (TC: 10000000146) sigorta dosyasını özetle.",
-    call_fn=lambda maskeli: openai.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": maskeli}]
-    ).choices[0].message.content,
-    on_leak="warn",  # sızıntı varsa uyar
-)
+mesaj = "TC'im 10000000146, siparişim nerede?"
+session = detector.create_session(mesaj)
+maskeli = session.mask()
+# → "TC'im [TC_KIMLIK_a3f], siparişim nerede?"
 
-print(sonuc.output)         # orijinal isim/TC geri yüklenmiş yanıt
-print(sonuc.report.safe)    # True → sızıntı yok
+ai_yaniti = openai_cagri(maskeli)
+# AI yanıtlar: "[TC_KIMLIK_a3f] numaralı siparişiniz kargoda."
+
+temiz_yanit = session.restore(ai_yaniti)
+# → "10000000146 numaralı siparişiniz kargoda."
 ```
+
+TC numarası hiç OpenAI'a gitmedi.
 
 ---
 
-### 3. E-posta ve Belge Özetleme
+### Senaryo 2 — Finansal e-posta özetleme
 
-Şirket içi e-postalar veya resmi belgeler AI'a gitmeden önce temizlenir, özet gelince orijinal veriler geri eklenir.
+Muhasebe ekibi IBAN ve tutar içeren e-postaları AI ile özetlettiriyor.
 
 ```python
-from kvkk_pii import PiiDetector
-
-detector = PiiDetector(layers=["regex", "ner"])
-
 eposta = """
 Sayın Fatma Kaya,
-IBAN'ınız TR33 0006 1005 1978 6457 8413 26 üzerinden
-15.000 TL ödeme yapılacaktır.
+TR33 0006 1005 1978 6457 8413 26 no'lu hesabınıza
+42.500 TL ödeme yapılacaktır. İmzalı teyit bekliyoruz.
 """
 
-session = detector.create_session(eposta)
-maskeli = session.mask()
-# → "Sayın [KISI_ADI_x3k], IBAN'ınız [IBAN_TR_b9f] üzerinden ..."
+sonuc = detector.two_way(
+    prompt=eposta,
+    call_fn=lambda m: ai_ozet(m),
+    on_leak="raise",  # sızıntı varsa hata fırlat
+)
 
-ai_ozet = yapay_zeka_cagri(maskeli)
-geri_yuklenmis = session.restore(ai_ozet)
+print(sonuc.output)
+# → Fatma Kaya'nın hesabına 42.500 TL ödeme yapılacak...
+#   (IBAN ve isim AI'ya gitmedi, özette geri yüklendi)
 ```
 
 ---
 
-### 4. Form ve Kullanıcı Girişi Tarama
+### Senaryo 3 — Sağlık verisi tespiti (KVKK Madde 6)
 
-Kayıt formlarında, müşteri yorumlarında veya destek taleplerinde kişisel veri kontrolü yapın.
-
-```python
-detector = PiiDetector()
-
-yorum = "Merhaba, TC'm 10000000146, lütfen iade işlemi yapın."
-sonuc = detector.analyze(yorum)
-
-if sonuc.has("TC_KIMLIK"):
-    # Formdan TC almayı engelle veya maskele
-    temiz = detector.anonymize(yorum)
-```
-
----
-
-### 5. Veritabanı / CSV Temizleme
-
-Eski veritabanlarında veya içe aktarılan CSV dosyalarında kişisel veri taraması yapın.
+Hasta notlarında özel nitelikli veri otomatik işaretlenir.
 
 ```python
-import csv
-from kvkk_pii import PiiDetector
-
-detector = PiiDetector()
-
-with open("musteriler.csv") as f:
-    satirlar = list(csv.reader(f))
-
-for satir in satirlar:
-    metin = " ".join(satir)
-    sonuc = detector.analyze(metin)
-    if sonuc.entities:
-        print(f"KVKK verisi bulundu: {[e.entity_type for e in sonuc.entities]}")
-```
-
----
-
-### 6. KVKK Uyum Raporu
-
-İşlediğiniz metnin KVKK'ya göre risk seviyesini ve ilgili maddeleri otomatik raporlayın.
-
-```python
-from kvkk_pii import PiiDetector
-
 detector = PiiDetector(layers=["regex", "ner", "gliner"])
 
-metin = "Hasta diyabet tedavisi görüyor. TC: 10000000146, tel: 0532 123 45 67"
-rapor = detector.compliance_report(metin)
+not_ = "Hasta tip 2 diyabet tanısı almış, Sünni mezhebine mensup."
+rapor = detector.compliance_report(not_)
 
 print(rapor.summary())
-# KVKK Uyum Raporu — 3 veri, genel risk: KRİTİK
+# KVKK Uyum Raporu — genel risk: KRİTİK
 # KVKK Madde 6 (Özel Nitelikli Veri) tespit edildi!
-#
-#   [KRİTİK] SAGLIK_VERISI x 1
-#     Dayanak: KVKK Madde 6 — Özel Nitelikli Kişisel Veri
-#     Öneri  : Açık rıza zorunlu. Yetkili kurum olmadan işlenemez.
-#   [YÜKSEK] TC_KIMLIK x 1
-#     ...
+#   [KRİTİK] SAGLIK_VERISI — Açık rıza zorunlu.
+#   [KRİTİK] DINI_INANC   — Kural olarak işlenemez.
+
+print(rapor.has_madde6)  # True
 ```
 
 ---
 
-### 7. FastAPI ile Servis Olarak Kullanma
+### Senaryo 4 — Log anonimleştirme
+
+Uygulama loglarında kişisel veri varsa KVKK ihlali doğar.
+
+```python
+import logging
+from kvkk_pii import PiiDetector
+
+detector = PiiDetector()
+
+class KvkkLogFilter(logging.Filter):
+    def filter(self, record):
+        record.msg = detector.anonymize(str(record.msg))
+        return True
+
+logging.getLogger().addFilter(KvkkLogFilter())
+
+# Artık loglar otomatik temizlenir:
+logging.info("Kullanıcı 0532 123 45 67 ile giriş yaptı")
+# → "Kullanıcı [TELEFON_TR] ile giriş yaptı"
+```
+
+---
+
+### Senaryo 5 — FastAPI servisi
 
 ```python
 from fastapi import FastAPI
@@ -192,56 +160,26 @@ detector = AsyncPiiDetector(layers=["regex", "ner"])
 async def tarama(metin: str):
     sonuc = await detector.analyze(metin)
     return {
-        "entity_sayisi": len(sonuc.entities),
+        "pii_var": bool(sonuc.entities),
         "tipler": [e.entity_type for e in sonuc.entities],
         "anonim": sonuc.anonymize(),
     }
+
+@app.post("/anonim")
+async def anonim(metin: str):
+    return {"sonuc": await detector.anonymize(metin)}
 ```
-
----
-
-### 8. PII Sızıntısı Tespiti
-
-Yapay zekânın yanıtında orijinal kişisel veri sızdı mı? Otomatik kontrol edin.
-
-```python
-from kvkk_pii import PiiDetector, LeakageAnalyzer
-
-detector = PiiDetector(layers=["regex", "ner"])
-session = detector.create_session("Ali Veli, 0532 123 45 67 numaralı müşteri.")
-maskeli = session.mask()
-
-ai_yaniti = yapay_zeka_cagri(maskeli)
-
-analyzer = LeakageAnalyzer(detector)
-rapor = analyzer.analyze(session, ai_yaniti)
-
-print(rapor.safe)       # False → sızıntı var
-print(rapor.summary())  # hangi veriler sızdı
-```
-
----
-
-## Katman Mimarisi
-
-| Katman | Yöntem | Model | Hız | Ne tespit eder |
-|--------|--------|-------|-----|----------------|
-| 1 | Regex + checksum | — | <1ms | TC Kimlik, IBAN, VKN, telefon, plaka, e-posta, pasaport |
-| 2 | NER | `akdeniz27/xlm-roberta-base-turkish-ner` | ~30ms | Kişi adı, konum, kurum |
-| 3 | Sıfır atışlı | `urchade/gliner_multi-v2.1` | ~80ms | KVKK Madde 6 özel kategoriler |
-
-Her katman, bir öncekinin bulduğu span'leri atlar — aynı veri iki kez işaretlenmez.
 
 ---
 
 ## Tespit Edilen Veri Türleri
 
-### Katman 1 — Regex
+### Katman 1 — Regex + Checksum (bağımlılık yok)
 
 | Tür | Açıklama | Doğrulama |
 |-----|----------|-----------|
-| `TC_KIMLIK` | 11 haneli TC kimlik numarası | Checksum |
-| `VKN` | 10 haneli vergi kimlik numarası | Checksum |
+| `TC_KIMLIK` | TC kimlik numarası (11 hane) | Checksum |
+| `VKN` | Vergi kimlik numarası (10 hane) | Checksum |
 | `IBAN_TR` | IBAN (tüm ülke kodları) | Mod97 |
 | `KREDI_KARTI` | Kredi kartı numarası | Luhn |
 | `TELEFON_TR` | Türk telefon numaraları | — |
@@ -254,19 +192,23 @@ Her katman, bir öncekinin bulduğu span'leri atlar — aynı veri iki kez işar
 | `TARIH` | Tarih | — |
 | `KISI_ADI` | Ünvan bazlı kişi adı | — |
 
-### Katman 2 — NER
+### Katman 2 — NER (`pip install kvkk-pii[ner]`)
+
+Model: `akdeniz27/xlm-roberta-base-turkish-ner` — %94.92 F1
 
 | Tür | Açıklama |
 |-----|----------|
-| `KISI_ADI` | Kişi adı (model bazlı) |
+| `KISI_ADI` | Kişi adı |
 | `KONUM` | Şehir, ilçe, ülke |
 | `KURUM` | Şirket, kurum adı |
 
-### Katman 3 — GLiNER (KVKK Madde 6)
+### Katman 3 — KVKK Madde 6 (`pip install kvkk-pii[full]`)
 
-| Tür | KVKK Karşılığı |
-|-----|----------------|
-| `SAGLIK_VERISI` | Sağlık verisi |
+Model: `urchade/gliner_multi-v2.1` — sıfır atışlı, 100+ dil
+
+| Tür | Açıklama |
+|-----|----------|
+| `SAGLIK_VERISI` | Sağlık ve tıbbi veri |
 | `DINI_INANC` | Din, mezhep bilgisi |
 | `SIYASI_GORUS` | Siyasi görüş |
 | `SENDIKA_UYELIGII` | Sendika üyeliği |
@@ -274,24 +216,33 @@ Her katman, bir öncekinin bulduğu span'leri atlar — aynı veri iki kez işar
 
 ---
 
-## Hazır Preset'ler
+## Diğer Özellikler
+
+### Hazır preset'ler
 
 ```python
 from kvkk_pii import presets
 
-detector = presets.turkish()       # KVKK — regex + NER (TR) + GLiNER
-detector = presets.german()        # DSGVO — regex (DE) + GLiNER
-detector = presets.french()        # RGPD — regex (FR) + GLiNER
-detector = presets.multilingual()  # TR + DE + FR birlikte
+detector = presets.turkish()       # KVKK — tam Türkçe destek
+detector = presets.german()        # DSGVO
+detector = presets.french()        # RGPD
+detector = presets.multilingual()  # TR + DE + FR
 ```
 
----
+### Komut satırı
 
-## Özel Recognizer Ekleme
+```bash
+kvkk-pii scan "Ali Veli TC: 10000000146"
+kvkk-pii scan --layer ner belge.txt
+kvkk-pii scan --format json "metin"
+kvkk-pii anonymize "Ali Veli TC: 10000000146"
+cat log.txt | kvkk-pii anonymize
+```
+
+### Özel recognizer
 
 ```python
-from kvkk_pii import BaseRecognizer, PiiEntity, PiiDetector
-from kvkk_pii.layers.regex_layer import DEFAULT_RECOGNIZERS
+from kvkk_pii import BaseRecognizer, PiiEntity
 
 class SicilNoRecognizer(BaseRecognizer):
     entity_type = "SICIL_NO"
@@ -302,54 +253,6 @@ class SicilNoRecognizer(BaseRecognizer):
             self._entity(m.group(), m.start(), m.end(), score=1.0)
             for m in re.finditer(r"\bSCL-\d{6}\b", text)
         ]
-
-detector = PiiDetector(recognizers=DEFAULT_RECOGNIZERS + [SicilNoRecognizer()])
-```
-
----
-
-## Komut Satırı (CLI)
-
-```bash
-# Metin tara
-kvkk-pii scan "Ali Veli TC: 10000000146"
-
-# Dosya tara
-kvkk-pii scan belge.txt
-
-# Pipe ile kullan
-cat belge.txt | kvkk-pii scan
-
-# NER katmanıyla tara
-kvkk-pii scan --layer ner "Ahmet Yılmaz İstanbul'da"
-
-# JSON çıktı
-kvkk-pii scan --format json "TC: 10000000146"
-
-# Anonimleştir
-kvkk-pii anonymize "Ali Veli TC: 10000000146"
-# → "Ali Veli TC: [TC_KIMLIK]"
-```
-
----
-
-## Yapılandırma
-
-```python
-from kvkk_pii import PiiDetector
-from kvkk_pii.config import NerConfig, GlinerConfig
-
-detector = PiiDetector(
-    layers=["regex", "ner", "gliner"],
-    download_policy="auto",    # "confirm" (varsayılan) | "auto" | "never"
-    ner_config=NerConfig(
-        min_score=0.85,        # yüksek = daha az yanlış pozitif
-        chunk_size=400,        # uzun metinler için chunk boyutu
-    ),
-    gliner_config=GlinerConfig(
-        threshold=0.5,
-    ),
-)
 ```
 
 ---
@@ -357,10 +260,8 @@ detector = PiiDetector(
 ## Gereksinimler
 
 - Python 3.10+
-- `pip install kvkk-pii` → bağımlılık yok
-- `pip install kvkk-pii[ner]` → `transformers`, `torch`, `huggingface-hub`
-- `pip install kvkk-pii[full]` → yukarıdaki + `gliner`
-- `pip install kvkk-pii[server]` → yukarıdaki + `fastapi`, `uvicorn`
+- Temel kurulum: sıfır bağımlılık
+- NER/GLiNER: `transformers`, `torch`, `huggingface-hub`, `gliner`
 
 ---
 

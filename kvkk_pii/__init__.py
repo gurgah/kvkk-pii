@@ -10,7 +10,7 @@ from .async_detector import AsyncPiiDetector
 from .compliance import ComplianceReport
 from . import presets
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 __all__ = [
     "PiiDetector", "PiiEntity", "PiiResult",
     "BaseRecognizer", "DEFAULT_RECOGNIZERS",
