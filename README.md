@@ -331,6 +331,38 @@ kvkk-pii anonymize "Ali Veli TC: 10000000146"
 cat log.txt | kvkk-pii anonymize
 ```
 
+### NER modelini değiştirme
+
+Varsayılan NER modeli `akdeniz27/xlm-roberta-base-turkish-ner` — HuggingFace'ten otomatik indirilir. İstediğiniz modelle değiştirebilirsiniz:
+
+```python
+from kvkk_pii import PiiDetector
+from kvkk_pii.config import NerConfig
+
+# Farklı bir HuggingFace NER modeli
+detector = PiiDetector(
+    layers=["regex", "ner"],
+    ner_config=NerConfig(
+        model_id="Jean-Baptiste/roberta-large-ner-english",
+        model_size_mb=1400,
+        min_score=0.85,
+    )
+)
+
+# Yerel diske önceden indirilmiş model (offline ortam)
+detector = PiiDetector(
+    layers=["regex", "ner"],
+    ner_config=NerConfig(
+        model_id="/opt/models/turkish-ner",  # local path
+    ),
+    download_policy="never",  # indirme yok, hazır model kullan
+)
+```
+
+Model cache'i: `~/.cache/huggingface/hub` — `HF_HOME` env variable ile değiştirilebilir.
+
+---
+
 ### Özel recognizer
 
 ```python
