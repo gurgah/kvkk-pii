@@ -8,7 +8,7 @@
 
 ---
 
-Şirketinizde yapay zekâ kullanılıyor. Destek ekibi müşteri mesajlarını ChatGPT'ye yapıştırıyor. Geliştiriciler API'ye tam metni gönderiyor. Muhasebe e-postaları özetletiliyor.
+Şirketinizde yapay zeka kullanılıyor. Destek ekibi müşteri mesajlarını ChatGPT'ye yapıştırıyor. Geliştiriciler API'ye tam metni gönderiyor. Muhasebe e-postaları özetletiliyor.
 
 Bu metinlerin içinde ne var?
 
@@ -22,7 +22,7 @@ Bu bir KVKK ihlali. Ve son kullanıcı değil, veriyi işleyen şirket sorumlu.
 
 ### İki yönlü koruma — veri hiç dışarı çıkmaz
 
-`kvkk-pii` yapay zekâ entegrasyonlarında **iki yönlü çalışır:**
+`kvkk-pii` yapay zeka entegrasyonlarında **iki yönlü çalışır:**
 
 ```
   Kullanıcı metni
@@ -54,7 +54,7 @@ Bu bir KVKK ihlali. Ve son kullanıcı değil, veriyi işleyen şirket sorumlu.
   (orijinal verilerle)
 ```
 
-Yapay zekâ modeli hiçbir zaman gerçek kişisel veriyi görmez.
+Yapay zeka modeli hiçbir zaman gerçek kişisel veriyi görmez.
 
 ```python
 from kvkk_pii import PiiDetector
@@ -74,7 +74,7 @@ print(sonuc.report.safe)    # True → hiçbir veri sızmadı
 
 ### Kişisel veri sızıntısı (PII leakage) nedir?
 
-Yapay zekâ modeline maskelenmiş veri gönderdiniz — ama model yanıtında yine de gerçek kişisel veriyi kullandı. Ya da prompt içindeki kişisel veriyi hiç fark etmeden geçirdiniz ve model bunu üçüncü bir içeriğe dahil etti. Buna **kişisel veri sızıntısı** (PII leakage) denir.
+Yapay zeka modeline maskelenmiş veri gönderdiniz — ama model yanıtında yine de gerçek kişisel veriyi kullandı. Ya da prompt içindeki kişisel veriyi hiç fark etmeden geçirdiniz ve model bunu üçüncü bir içeriğe dahil etti. Buna **kişisel veri sızıntısı** (PII leakage) denir.
 
 `kvkk-pii` AI yanıtını otomatik tarar: maskelenen veriler geri döndü mü, yeni kişisel veri ortaya çıktı mı, risk var mı?
 
