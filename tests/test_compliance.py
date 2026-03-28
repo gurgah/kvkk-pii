@@ -17,19 +17,19 @@ def detector():
 
 def test_bos_metin_temiz(detector):
     report = detector.compliance_report("Merhaba dünya")
-    assert report.overall_risk == "düşük"
+    assert report.overall_risk == "low"
     assert len(report.violations) == 0
 
 
 def test_tc_kimlik_risk(detector):
     report = detector.compliance_report("TC: 10000000146")
-    assert report.overall_risk == "yüksek"
+    assert report.overall_risk == "critical"
     assert any(v.entity_type == "TC_KIMLIK" for v in report.violations)
 
 
-def test_kredi_karti_kritik(detector):
+def test_kredi_karti_critical(detector):
     report = detector.compliance_report("Kart: 4532015112830366")
-    assert report.overall_risk == "kritik"
+    assert report.overall_risk == "critical"
 
 
 def test_madde6_saglik(detector):
@@ -57,4 +57,4 @@ def test_risk_sirasi(detector):
     """Kritik ihlaller listede önce gelmeli."""
     report = detector.compliance_report("Kart: 4532015112830366, ali@test.com")
     if len(report.violations) >= 2:
-        assert report.violations[0].risk in ("kritik", "yüksek")
+        assert report.violations[0].risk in ("critical", "high")

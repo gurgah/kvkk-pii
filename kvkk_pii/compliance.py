@@ -12,115 +12,115 @@ from typing import Literal
 
 from .result import PiiResult, PiiEntity
 
-RiskLevel = Literal["düşük", "orta", "yüksek", "kritik"]
+RiskLevel = Literal["low", "medium", "high", "critical"]
 
 # Entity type -> KVKK maddesi + aciklama
 _KVKK_MAP: dict[str, dict] = {
     "TC_KIMLIK": {
-        "madde": "KVKK Madde 6 değil — Kimlik verisi (Madde 4/ç)",
+        "madde": "KVKK Madde 6 degil — Kimlik verisi (Madde 4/c)",
         "kategori": "Kimlik Verisi",
-        "risk": "yüksek",
-        "oneri": "İşleme için açık rıza veya kanuni dayanak gerekli.",
+        "risk": "critical",
+        "oneri": "Isleme icin acik riza veya kanuni dayanak gerekli.",
     },
     "VKN": {
-        "madde": "Kimlik Verisi (Madde 4/ç)",
+        "madde": "Kimlik Verisi (Madde 4/c)",
         "kategori": "Kimlik Verisi",
-        "risk": "orta",
-        "oneri": "Vergi kaydı amaçlı işleme meşru menfaatle yapılabilir.",
+        "risk": "medium",
+        "oneri": "Vergi kaydi amacli isleme mesru menfaatle yapilabilir.",
     },
     "IBAN_TR": {
-        "madde": "Finansal Veri (Madde 4/ç)",
+        "madde": "Finansal Veri (Madde 4/c)",
         "kategori": "Finansal Veri",
-        "risk": "yüksek",
-        "oneri": "Ödeme işlemleri dışında saklanmamalı.",
+        "risk": "high",
+        "oneri": "Odeme islemleri disinda saklanmamali.",
     },
     "KREDI_KARTI": {
-        "madde": "Finansal Veri (Madde 4/ç)",
+        "madde": "Finansal Veri (Madde 4/c)",
         "kategori": "Finansal Veri",
-        "risk": "kritik",
-        "oneri": "PCI-DSS uyumu zorunlu. Kart numarası asla loglanmamalı.",
+        "risk": "critical",
+        "oneri": "PCI-DSS uyumu zorunlu. Kart numarasi asla loglanmamali.",
     },
     "TELEFON_TR": {
-        "madde": "İletişim Verisi (Madde 4/ç)",
-        "kategori": "İletişim Verisi",
-        "risk": "orta",
-        "oneri": "Pazarlama amacıyla işleme için açık rıza gerekli (İYS).",
+        "madde": "Iletisim Verisi (Madde 4/c)",
+        "kategori": "Iletisim Verisi",
+        "risk": "medium",
+        "oneri": "Pazarlama amacli isleme icin acik riza gerekli (IYS).",
     },
     "EMAIL": {
-        "madde": "İletişim Verisi (Madde 4/ç)",
-        "kategori": "İletişim Verisi",
-        "risk": "orta",
-        "oneri": "Ticari elektronik ileti için İYS kaydı gerekli.",
+        "madde": "Iletisim Verisi (Madde 4/c)",
+        "kategori": "Iletisim Verisi",
+        "risk": "medium",
+        "oneri": "Ticari elektronik ileti icin IYS kaydi gerekli.",
     },
     "KISI_ADI": {
-        "madde": "Kişisel Veri (Madde 3/d)",
+        "madde": "Kisisel Veri (Madde 3/d)",
         "kategori": "Kimlik Verisi",
-        "risk": "düşük",
-        "oneri": "Diğer verilerle birleştiğinde risk artar.",
+        "risk": "low",
+        "oneri": "Diger verilerle birlestigi durumda risk artar.",
     },
     "KONUM": {
-        "madde": "Konum Verisi (Madde 4/ç)",
+        "madde": "Konum Verisi (Madde 4/c)",
         "kategori": "Konum Verisi",
-        "risk": "orta",
-        "oneri": "Sürekli konum takibi için açık rıza gerekli.",
+        "risk": "medium",
+        "oneri": "Surekli konum takibi icin acik riza gerekli.",
     },
     "ADRES": {
-        "madde": "Konum Verisi (Madde 4/ç)",
+        "madde": "Konum Verisi (Madde 4/c)",
         "kategori": "Konum Verisi",
-        "risk": "orta",
-        "oneri": "Adres verisi kimlikle birleşince yüksek risk.",
+        "risk": "medium",
+        "oneri": "Adres verisi kimlikle bilesince yuksek risk.",
     },
     "SAGLIK_VERISI": {
-        "madde": "KVKK Madde 6 — Özel Nitelikli Kişisel Veri",
-        "kategori": "Özel Nitelikli Veri",
-        "risk": "kritik",
-        "oneri": "Açık rıza zorunlu. Yetkili kurum olmadan işlenemez.",
+        "madde": "KVKK Madde 6 — Ozel Nitelikli Kisisel Veri",
+        "kategori": "Ozel Nitelikli Veri",
+        "risk": "critical",
+        "oneri": "Acik riza zorunlu. Yetkili kurum olmadan islenemez.",
     },
     "DINI_INANC": {
-        "madde": "KVKK Madde 6 — Özel Nitelikli Kişisel Veri",
-        "kategori": "Özel Nitelikli Veri",
-        "risk": "kritik",
-        "oneri": "Açık rıza zorunlu. Kural olarak işlenemez.",
+        "madde": "KVKK Madde 6 — Ozel Nitelikli Kisisel Veri",
+        "kategori": "Ozel Nitelikli Veri",
+        "risk": "critical",
+        "oneri": "Acik riza zorunlu. Kural olarak islenemez.",
     },
     "SIYASI_GORUS": {
-        "madde": "KVKK Madde 6 — Özel Nitelikli Kişisel Veri",
-        "kategori": "Özel Nitelikli Veri",
-        "risk": "kritik",
-        "oneri": "Açık rıza zorunlu. Kural olarak işlenemez.",
+        "madde": "KVKK Madde 6 — Ozel Nitelikli Kisisel Veri",
+        "kategori": "Ozel Nitelikli Veri",
+        "risk": "critical",
+        "oneri": "Acik riza zorunlu. Kural olarak islenemez.",
     },
     "SENDIKA_UYELIGII": {
-        "madde": "KVKK Madde 6 — Özel Nitelikli Kişisel Veri",
-        "kategori": "Özel Nitelikli Veri",
-        "risk": "kritik",
-        "oneri": "Açık rıza zorunlu. Kural olarak işlenemez.",
+        "madde": "KVKK Madde 6 — Ozel Nitelikli Kisisel Veri",
+        "kategori": "Ozel Nitelikli Veri",
+        "risk": "critical",
+        "oneri": "Acik riza zorunlu. Kural olarak islenemez.",
     },
     "BIYOMETRIK_VERI": {
-        "madde": "KVKK Madde 6 — Özel Nitelikli Kişisel Veri",
-        "kategori": "Özel Nitelikli Veri",
-        "risk": "kritik",
-        "oneri": "Açık rıza zorunlu. Güvenli ortamda saklanmalı.",
+        "madde": "KVKK Madde 6 — Ozel Nitelikli Kisisel Veri",
+        "kategori": "Ozel Nitelikli Veri",
+        "risk": "critical",
+        "oneri": "Acik riza zorunlu. Guvenli ortamda saklanmali.",
     },
     "SGK_NO": {
-        "madde": "Kimlik Verisi (Madde 4/ç)",
+        "madde": "Kimlik Verisi (Madde 4/c)",
         "kategori": "Kimlik Verisi",
-        "risk": "yüksek",
-        "oneri": "SGK işlemleri dışında işlenemez.",
+        "risk": "high",
+        "oneri": "SGK islemleri disinda islenemez.",
     },
     "IP_ADRESI": {
-        "madde": "Kişisel Veri (Madde 3/d) — bağlamsal",
+        "madde": "Kisisel Veri (Madde 3/d) — baglamsal",
         "kategori": "Teknik Veri",
-        "risk": "düşük",
-        "oneri": "Dinamik IP tek başına kişisel veri sayılmayabilir.",
+        "risk": "low",
+        "oneri": "Dinamik IP tek basina kisisel veri sayilmayabilir.",
     },
     "PLAKA_TR": {
-        "madde": "Kimlik Verisi (Madde 4/ç) — dolaylı",
+        "madde": "Kimlik Verisi (Madde 4/c) — dolayli",
         "kategori": "Kimlik Verisi",
-        "risk": "düşük",
-        "oneri": "Araç sahibiyle ilişkilendirildiğinde kişisel veri.",
+        "risk": "low",
+        "oneri": "Arac sahibiyle iliskilendirildiginde kisisel veri.",
     },
 }
 
-_RISK_ORDER = {"düşük": 0, "orta": 1, "yüksek": 2, "kritik": 3}
+_RISK_ORDER = {"low": 0, "medium": 1, "high": 2, "critical": 3}
 
 
 @dataclass
@@ -167,9 +167,9 @@ class ComplianceReport:
         if violations:
             overall_risk = max(violations, key=lambda v: _RISK_ORDER[v.risk]).risk
         else:
-            overall_risk = "düşük"
+            overall_risk = "low"
 
-        has_madde6 = any(v.kategori == "Özel Nitelikli Veri" for v in violations)
+        has_madde6 = any(v.kategori == "Ozel Nitelikli Veri" for v in violations)
 
         # Risk seviyesine gore sirala
         violations.sort(key=lambda v: _RISK_ORDER[v.risk], reverse=True)
@@ -183,18 +183,18 @@ class ComplianceReport:
 
     def summary(self) -> str:
         if not self.violations:
-            return "KVKK ihlali tespit edilmedi."
+            return "No PII detected."
 
         lines = [
-            f"KVKK Uyum Raporu — {self.entity_count} veri, genel risk: {self.overall_risk.upper()}",
+            f"KVKK Compliance Report — {self.entity_count} entities, overall risk: {self.overall_risk.upper()}",
         ]
         if self.has_madde6:
-            lines.append("KVKK Madde 6 (Özel Nitelikli Veri) tespit edildi!")
+            lines.append("KVKK Article 6 (Special Category Data) detected!")
         lines.append("")
         for v in self.violations:
             lines.append(f"  [{v.risk.upper()}] {v.entity_type} x {v.count}")
-            lines.append(f"    Dayanak: {v.madde}")
-            lines.append(f"    Öneri  : {v.oneri}")
+            lines.append(f"    Article: {v.madde}")
+            lines.append(f"    Advice : {v.oneri}")
         return "\n".join(lines)
 
     def to_dict(self) -> dict:
