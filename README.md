@@ -4,15 +4,23 @@
 [![Python](https://img.shields.io/pypi/pyversions/kvkk-pii)](https://pypi.org/project/kvkk-pii/)
 [![Lisans](https://img.shields.io/pypi/l/kvkk-pii)](LICENSE)
 
-## Müşteri verisini yapay zekâya göndermeden önce ne yapıyorsunuz?
+**Müşteri verisi yapay zekâya gitmeden önce onu koruyan Python kütüphanesi.**
 
-Birçok ekip ChatGPT, Claude veya dahili LLM'lere **TC kimlik numarası, IBAN, telefon, hasta bilgisi** içeren metinler gönderiyor. Farkında olmadan. Bu hem **KVKK ihlali** hem de ciddi bir güvenlik riski.
+---
 
-`kvkk-pii` bu sorunu çözer:
+Şirketinizde yapay zekâ kullanılıyor. Destek ekibi müşteri mesajlarını ChatGPT'ye yapıştırıyor. Geliştiriciler API'ye tam metni gönderiyor. Muhasebe e-postaları özetletiliyor.
 
-```
-müşteri metni  →  kişisel verileri maskele  →  AI'ya gönder  →  sızıntı kontrol et  →  geri yükle
-```
+Bu metinlerin içinde ne var?
+
+**TC kimlik numarası. IBAN. Telefon. Hasta bilgisi. Kişi adları.**
+
+Bunların tamamı o anda OpenAI, Google veya başka bir şirketin sunucusuna gidiyor. Çoğu zaman kimse farkında bile değil.
+
+Bu bir KVKK ihlali. Ve son kullanıcı değil, veriyi işleyen şirket sorumlu.
+
+---
+
+`kvkk-pii` bu riski ortadan kaldırır. Yapay zekâya göndermeden önce kişisel veriyi maskeler, yanıt geldikten sonra geri yükler. Veri hiç dışarı çıkmaz.
 
 ```python
 from kvkk_pii import PiiDetector
@@ -27,6 +35,8 @@ sonuc = detector.two_way(
 print(sonuc.output)         # AI yanıtı — orijinal isim ve TC geri yüklendi
 print(sonuc.report.safe)    # True → hiçbir veri sızmadı
 ```
+
+`pip install kvkk-pii`
 
 ---
 
