@@ -4,7 +4,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/kvkk-pii)](https://pypi.org/project/kvkk-pii/)
 [![Lisans](https://img.shields.io/pypi/l/kvkk-pii)](LICENSE)
 
-**Müşteri verisi yapay zekâya gitmeden önce onu koruyan Python kütüphanesi.**
+**Türkçe metinlerde kişisel veri tespiti, maskeleme ve KVKK uyum kontrolü — tek kütüphane.**
 
 ---
 
@@ -12,15 +12,24 @@
 
 Bu metinlerin içinde ne var?
 
-**TC kimlik numarası. IBAN. Telefon. Hasta bilgisi. Kişi adları.**
+**TC kimlik numarası. IBAN. Telefon numarası. Hasta bilgisi. Kişi adları.**
 
-Bunların tamamı o anda OpenAI, Google veya başka bir şirketin sunucusuna gidiyor. Çoğu zaman kimse farkında bile değil.
+Bunların tamamı — yani PII (Personally Identifiable Information / kişisel tanımlanabilir bilgi) — o anda OpenAI, Google veya başka bir şirketin sunucusuna gidiyor. Çoğu zaman kimse farkında bile değil.
 
 Bu bir KVKK ihlali. Ve son kullanıcı değil, veriyi işleyen şirket sorumlu.
 
 ---
 
-`kvkk-pii` bu riski ortadan kaldırır. Yapay zekâya göndermeden önce kişisel veriyi maskeler, yanıt geldikten sonra geri yükler. Veri hiç dışarı çıkmaz.
+### İki yönlü koruma — veri hiç dışarı çıkmaz
+
+`kvkk-pii` yapay zekâ entegrasyonlarında **iki yönlü çalışır:**
+
+```
+① Gönderilmeden önce  →  kişisel veriyi tespit et, benzersiz takma adla maskele
+② Yanıt geldikten sonra  →  takma adları orijinal verilerle geri yükle
+```
+
+Böylece yapay zekâ modeli hiçbir zaman gerçek kişisel veriyi görmez.
 
 ```python
 from kvkk_pii import PiiDetector
@@ -35,6 +44,36 @@ sonuc = detector.two_way(
 print(sonuc.output)         # AI yanıtı — orijinal isim ve TC geri yüklendi
 print(sonuc.report.safe)    # True → hiçbir veri sızmadı
 ```
+
+---
+
+### PII sızıntısı (PII leakage) nedir?
+
+Yapay zekâ modeline maskelenmiş veri gönderdiniz — ama model yanıtında yine de gerçek kişisel veriyi kullandı. Ya da prompt içindeki kişisel veriyi hiç fark etmeden geçirdiniz ve model bunu üçüncü bir içeriğe dahil etti. Buna **PII sızıntısı** denir.
+
+`kvkk-pii` AI yanıtını otomatik tarar: maskelenen veriler geri döndü mü, yeni kişisel veri ortaya çıktı mı, risk var mı?
+
+```python
+print(sonuc.report.leaked)    # sızan veri listesi
+print(sonuc.report.new_pii)   # AI'ın kendi ürettiği kişisel veri
+print(sonuc.report.risk_score) # 0.0 güvenli — 1.0 kritik
+```
+
+---
+
+### KVKK uyum (compliance) raporu
+
+Sadece maskeleme değil — işlenen verinin **hangi KVKK maddesini ilgilendirdiğini**, risk seviyesini ve yasal öneriyi de raporlar.
+
+```python
+rapor = detector.compliance_report(metin)
+print(rapor.summary())
+# KVKK Uyum Raporu — genel risk: KRİTİK
+# KVKK Madde 6 (Özel Nitelikli Veri) tespit edildi!
+#   [KRİTİK] SAGLIK_VERISI — Açık rıza zorunlu.
+```
+
+---
 
 `pip install kvkk-pii`
 
