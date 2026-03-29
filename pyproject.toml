@@ -4,11 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kvkk-pii"
-version = "0.1.8"
+version = "0.1.9"
 description = "KVKK uyumlu Türkçe PII detection kütüphanesi"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
+authors = [{ name = "Aleonis", email = "hello@aleonis.co" }]
 keywords = ["pii", "kvkk", "gdpr", "turkish", "nlp", "privacy", "data-protection"]
 classifiers = [
     "Programming Language :: Python :: 3",
