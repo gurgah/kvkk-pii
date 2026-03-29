@@ -6,6 +6,10 @@
 
 **Türkçe metinlerde kişisel veri tespiti, maskeleme ve KVKK uyum kontrolü — tek kütüphane.**
 
+```bash
+pip install kvkk-pii
+```
+
 ---
 
 Şirketinizde yapay zeka kullanılıyor. Destek ekibi müşteri mesajlarını ChatGPT'ye yapıştırıyor. Geliştiriciler API'ye tam metni gönderiyor. Muhasebe e-postaları özetletiliyor.
