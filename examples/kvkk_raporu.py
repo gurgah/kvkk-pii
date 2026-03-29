@@ -29,7 +29,6 @@ E-posta     : fatma.kaya@example.com
 Adres       : Bağcılar Cad. No:12, İstanbul
 
 Tanı        : Tip 2 diyabet, hipertansiyon
-Mezhep      : Sünni (hasta beyanı)
 Sendika     : Türk Sağlık-Sen üyesi
 
 Doktor      : Dr. Mehmet Demir
