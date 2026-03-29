@@ -43,8 +43,19 @@ def _remove_overlaps(entities: list[PiiEntity]) -> list[PiiEntity]:
 
 
 class RegexLayer:
-    def __init__(self, recognizers: list[BaseRecognizer] | None = None) -> None:
-        self.recognizers = recognizers if recognizers is not None else DEFAULT_RECOGNIZERS
+    def __init__(
+        self,
+        recognizers: list[BaseRecognizer] | None = None,
+        disable: list[str] | None = None,
+        before: list[BaseRecognizer] | None = None,
+        after: list[BaseRecognizer] | None = None,
+    ) -> None:
+        base = recognizers if recognizers is not None else list(DEFAULT_RECOGNIZERS)
+        if disable:
+            disabled = set(disable)
+            base = [r for r in base if r.entity_type not in disabled]
+        final = list(before or []) + base + list(after or [])
+        self.recognizers = final
 
     def analyze(self, text: str) -> list[PiiEntity]:
         entities: list[PiiEntity] = []

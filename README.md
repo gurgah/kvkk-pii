@@ -482,10 +482,23 @@ sonuc = detector.two_way(
 
 ---
 
-### Özel recognizer
+### Recognizer'ları devre dışı bırakma
+
+Belirli tipleri tespitten çıkarmak için `disable` parametresi:
 
 ```python
-from kvkk_pii import BaseRecognizer, PiiEntity
+# EMAIL ve IP tespitini kapat
+detector = PiiDetector(disable=["EMAIL", "IP_ADRESI"])
+result = detector.analyze("ali@ornek.com, 192.168.1.1, TC: 10000000146")
+# Sadece TC_KIMLIK bulunur
+```
+
+### Özel recognizer — before / after
+
+Varsayılan recognizer listesini koruyarak önüne (`before`) veya arkasına (`after`) özel recognizer ekle:
+
+```python
+from kvkk_pii import BaseRecognizer, PiiEntity, PiiDetector
 
 class SicilNoRecognizer(BaseRecognizer):
     entity_type = "SICIL_NO"
@@ -496,7 +509,19 @@ class SicilNoRecognizer(BaseRecognizer):
             self._entity(m.group(), m.start(), m.end(), score=1.0)
             for m in re.finditer(r"\bSCL-\d{6}\b", text)
         ]
+
+# Varsayılan recognizer'ların önünde çalışır
+detector = PiiDetector(before=[SicilNoRecognizer()])
+
+# Varsayılan recognizer'ların arkasında çalışır
+detector = PiiDetector(after=[SicilNoRecognizer()])
+
+# disable + after birlikte
+detector = PiiDetector(disable=["EMAIL"], after=[SicilNoRecognizer()])
 ```
+
+> `recognizers=` parametresi varsayılan listeyi tamamen değiştirir.
+> `before`/`after` ise varsayılan listeyi koruyarak etrafına ekler.
 
 ---
 

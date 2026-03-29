@@ -277,3 +277,66 @@ class TestPasaport:
         # Current impl only supports U prefix
         result = rec.find("A12345678")
         assert len(result) == 0
+
+
+# =====================================================================
+# Disable / Before / After
+# =====================================================================
+
+from kvkk_pii import PiiDetector, BaseRecognizer, PiiEntity
+
+
+class TestDisableAndOrdering:
+    def test_disable_email(self):
+        d = PiiDetector(disable=['EMAIL'])
+        r = d.analyze('Mail: ali@ornek.com, TC: 10000000146')
+        assert not r.has('EMAIL')
+        assert r.has('TC_KIMLIK')
+
+    def test_disable_multiple(self):
+        d = PiiDetector(disable=['EMAIL', 'IP_ADRESI'])
+        r = d.analyze('ali@ornek.com ve 192.168.1.1')
+        assert not r.has('EMAIL')
+        assert not r.has('IP_ADRESI')
+
+    def test_before_recognizer_runs_first(self):
+        import re as _re
+
+        class SicilNo(BaseRecognizer):
+            entity_type = 'SICIL_NO'
+            def find(self, text):
+                return [self._entity(m.group(), m.start(), m.end(), 1.0)
+                        for m in _re.finditer(r'\bSCL-\d{6}\b', text)]
+
+        d = PiiDetector(before=[SicilNo()])
+        r = d.analyze('Sicil: SCL-004521, email: ali@ornek.com')
+        assert r.has('SICIL_NO')
+        assert r.has('EMAIL')
+
+    def test_after_recognizer(self):
+        import re as _re
+
+        class SicilNo(BaseRecognizer):
+            entity_type = 'SICIL_NO'
+            def find(self, text):
+                return [self._entity(m.group(), m.start(), m.end(), 1.0)
+                        for m in _re.finditer(r'\bSCL-\d{6}\b', text)]
+
+        d = PiiDetector(after=[SicilNo()])
+        r = d.analyze('SCL-004521 ve TC: 10000000146')
+        assert r.has('SICIL_NO')
+        assert r.has('TC_KIMLIK')
+
+    def test_disable_with_after(self):
+        import re as _re
+
+        class SicilNo(BaseRecognizer):
+            entity_type = 'SICIL_NO'
+            def find(self, text):
+                return [self._entity(m.group(), m.start(), m.end(), 1.0)
+                        for m in _re.finditer(r'\bSCL-\d{6}\b', text)]
+
+        d = PiiDetector(disable=['EMAIL'], after=[SicilNo()])
+        r = d.analyze('ali@ornek.com, SCL-004521')
+        assert not r.has('EMAIL')
+        assert r.has('SICIL_NO')

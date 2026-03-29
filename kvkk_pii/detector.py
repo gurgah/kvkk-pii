@@ -39,12 +39,17 @@ class PiiDetector:
         self,
         layers: list[LayerSpec] | None = None,
         recognizers: list[BaseRecognizer] | None = None,
+        disable: list[str] | None = None,
+        before: list[BaseRecognizer] | None = None,
+        after: list[BaseRecognizer] | None = None,
         download_policy: Literal["auto", "confirm", "never"] = "confirm",
         ner_config: NerConfig | None = None,
         gliner_config: GlinerConfig | None = None,
     ) -> None:
         self._layers: list[LayerSpec] = layers or ["regex"]
-        self._regex_layer = RegexLayer(recognizers=recognizers)
+        self._regex_layer = RegexLayer(
+            recognizers=recognizers, disable=disable, before=before, after=after,
+        )
         self._ner: NerLayer | None = None
         self._gliner: GlinerLayer | None = None
 
